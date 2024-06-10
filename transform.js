@@ -12,16 +12,33 @@ admin.initializeApp({
 // Initialize Firestore
 const db = admin.firestore();
 const data = JSON.parse(fs.readFileSync("transformedData.json"));
-const ratingData = JSON.parse(fs.readFileSync("Ratings.json"));
 
-const transformedData = [];
+async function uploadData() {
+  const batch = db.batch();
 
-const getOverallRating = (instituteName) => {
-  const instituteRating = ratingData.find((item) =>
-    item.Institute.includes(instituteName)
-  );
-  return instituteRating ? instituteRating["Overall Rating"] : null;
-};
+  data.forEach((college) => {
+    const docRef = db.collection("institutes").doc(); // Automatically generate an ID
+    batch.set(docRef, college);
+  });
+
+  await batch.commit();
+  console.log("Data successfully uploaded to Firestore!");
+}
+
+uploadData().catch(console.error);
+
+uploadData().catch(console.error);
+
+// const ratingData = JSON.parse(fs.readFileSync("Ratings.json"));
+
+// const transformedData = [];
+
+// const getOverallRating = (instituteName) => {
+//   const instituteRating = ratingData.find((item) =>
+//     item.Institute.includes(instituteName)
+//   );
+//   return instituteRating ? instituteRating["Overall Rating"] : null;
+// };
 
 // data.forEach((entry) => {
 //   const {
@@ -63,6 +80,5 @@ const getOverallRating = (instituteName) => {
 //   "transformedData.json",
 //   JSON.stringify(transformedData, null, 4)
 // );
-
 
 // console.log("Transformed data has been saved to transformedData.json");

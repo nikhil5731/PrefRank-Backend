@@ -2,6 +2,18 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
 const cors = require("cors");
+const admin = require("firebase-admin");
+
+// Path to your service account key
+const serviceAccount = require("./service.json");
+
+// Initialize Firebase Admin SDK
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+// Initialize Firestore
+const db = admin.firestore();
 
 // Initialize Express app
 const app = express();
@@ -9,9 +21,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-let collegesData = [];
-
-collegesData = JSON.parse(fs.readFileSync("transformedData.json"));
 ratings = JSON.parse(fs.readFileSync("Ratings.json"));
 
 function filterColleges(colleges, quota, categories, rank) {
@@ -60,22 +69,34 @@ function filterColleges(colleges, quota, categories, rank) {
 }
 
 // API route to get colleges based on filters
-app.post("/get-colleges", (req, res) => {
-  const { quota, categories, rank } = req.body;
+app.post("/get-colleges", async (req, res) => {
+  try {
+    const { quota, categories, rank } = req.body;
 
-  if (!quota || !categories || rank === undefined) {
-    return res
-      .status(400)
-      .send({ error: "quota, categories, and rank are required" });
+    if (!quota || !categories || rank === undefined) {
+      return res
+        .status(400)
+        .send({ error: "quota, categories, and rank are required" });
+    }
+
+    const snapshot = await db.collection("institutes").get();
+
+    if (snapshot.empty) {
+      console.log("No documents found in collection.");
+      return;
+    }
+
+    let colleges = [];
+    // Iterate through each document
+    snapshot.forEach((doc) => {
+      colleges.push(doc.data());
+    });
+
+    const filteredColleges = filterColleges(colleges, quota, categories, rank);
+    return res.send(filteredColleges);
+  } catch (error) {
+    console.log(error);
   }
-
-  const filteredColleges = filterColleges(
-    collegesData,
-    quota,
-    categories,
-    rank
-  );
-  return res.send(filteredColleges);
 });
 
 // Start the server
