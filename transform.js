@@ -17,7 +17,7 @@ async function uploadData() {
   const batch = db.batch();
 
   data.forEach((college) => {
-    const docRef = db.collection("institutes").doc(); // Automatically generate an ID
+    const docRef = db.collection("institutes_new").doc(); // Automatically generate an ID
     batch.set(docRef, college);
   });
 
@@ -25,60 +25,60 @@ async function uploadData() {
   console.log("Data successfully uploaded to Firestore!");
 }
 
-uploadData().catch(console.error);
-
-uploadData().catch(console.error);
-
 // const ratingData = JSON.parse(fs.readFileSync("Ratings.json"));
+const getOverallRating = (instituteName) => {
+  const instituteRating = ratingData.find((item) =>
+    item.Institute.includes(instituteName)
+  );
+  return instituteRating ? instituteRating["Overall Rating"] : null;
+};
 
-// const transformedData = [];
+const convertData = () => {
+  const transformedData = [];
 
-// const getOverallRating = (instituteName) => {
-//   const instituteRating = ratingData.find((item) =>
-//     item.Institute.includes(instituteName)
-//   );
-//   return instituteRating ? instituteRating["Overall Rating"] : null;
-// };
+  data.forEach((entry) => {
+    const {
+      Institute,
+      Quota,
+      Categories,
+      Opening_Rank_2024,
+      Closing_Rank_2024,
+      Department,
+    } = entry;
 
-// data.forEach((entry) => {
-//   const {
-//     Institute,
-//     Quota,
-//     Categories,
-//     Opening_Rank_2024,
-//     Closing_Rank_2024,
-//     Department,
-//   } = entry;
+    let instituteEntry = transformedData.find(
+      (item) => item.institute_name === Institute
+    );
+    if (!instituteEntry) {
+      instituteEntry = {
+        institute_name: Institute,
+        quotas: {},
+        //   Overall_Rating: getOverallRating(Institute),
+      };
+      transformedData.push(instituteEntry);
+    }
 
-//   let instituteEntry = transformedData.find(
-//     (item) => item.institute_name === Institute
-//   );
-//   if (!instituteEntry) {
-//     instituteEntry = {
-//       institute_name: Institute,
-//       quotas: {},
-//       //   Overall_Rating: getOverallRating(Institute),
-//     };
-//     transformedData.push(instituteEntry);
-//   }
+    if (!instituteEntry.quotas[Quota]) {
+      instituteEntry.quotas[Quota] = {};
+    }
 
-//   if (!instituteEntry.quotas[Quota]) {
-//     instituteEntry.quotas[Quota] = {};
-//   }
+    if (!instituteEntry.quotas[Quota][Categories]) {
+      instituteEntry.quotas[Quota][Categories] = [];
+    }
+    instituteEntry.quotas[Quota][Categories].push({
+      Opening_Rank_2024: Opening_Rank_2024,
+      Closing_Rank_2024: Closing_Rank_2024,
+      Department: Department,
+    });
+  });
 
-//   if (!instituteEntry.quotas[Quota][Categories]) {
-//     instituteEntry.quotas[Quota][Categories] = [];
-//   }
-//   instituteEntry.quotas[Quota][Categories].push({
-//     Opening_Rank_2024,
-//     Closing_Rank_2024,
-//     Department,
-//   });
-// });
+  fs.writeFileSync(
+    "transformedData.json",
+    JSON.stringify(transformedData, null, 4)
+  );
 
-// fs.writeFileSync(
-//   "transformedData.json",
-//   JSON.stringify(transformedData, null, 4)
-// );
+  console.log("Transformed data has been saved to transformedData.json");
+};
 
-// console.log("Transformed data has been saved to transformedData.json");
+uploadData().catch(console.error);
+// convertData();

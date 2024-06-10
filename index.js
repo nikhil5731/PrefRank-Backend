@@ -21,6 +21,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+// colleges = JSON.parse(fs.readFileSync("transformedData.json"));
 ratings = JSON.parse(fs.readFileSync("Ratings.json"));
 
 function filterColleges(colleges, quota, categories, rank) {
@@ -46,14 +47,13 @@ function filterColleges(colleges, quota, categories, rank) {
 
       return {
         institute_name: college["institute_name"],
-        departments: collegeData.sort(
-          (a, b) => a["Opening_Rank_2024"] - b["Opening_Rank_2024"]
-        ),
+        departments: collegeData,
       };
     })
     .filter((college) => college !== null);
 
   let filteredColleges = [];
+
   for (let i = 0; i < temp.length; i++) {
     const institute_name = temp[i]["institute_name"];
     const departments = temp[i]["departments"];
@@ -61,8 +61,8 @@ function filterColleges(colleges, quota, categories, rank) {
       filteredColleges.push({
         institute_name: institute_name,
         department: departments[j]["Department"],
-        Opening_Rank_2024: departments[j]["Opening_Rank_2024"],
         Closing_Rank_2024: departments[j]["Closing_Rank_2024"],
+        Opening_Rank_2024: departments[j]["Opening_Rank_2024"],
       });
     }
   }
@@ -81,20 +81,28 @@ app.post("/get-colleges", async (req, res) => {
         .send({ error: "quota, categories, and rank are required" });
     }
 
-    const snapshot = await db.collection("institutes").get();
+    const snapshot = await db.collection("institutes_new").get();
 
     if (snapshot.empty) {
       console.log("No documents found in collection.");
       return;
     }
 
-    let colleges = [];
+    let collegesDB = [];
     // Iterate through each document
     snapshot.forEach((doc) => {
-      colleges.push(doc.data());
+      collegesDB.push(doc.data());
     });
 
-    const filteredColleges = filterColleges(colleges, quota, categories, rank);
+    fs.writeFileSync("testing.json", JSON.stringify(collegesDB, null, 4));
+
+    const filteredColleges = filterColleges(
+      collegesDB,
+      quota,
+      categories,
+      rank
+    );
+
     return res.send(filteredColleges);
   } catch (error) {
     console.log(error);
