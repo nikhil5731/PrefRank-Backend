@@ -99,8 +99,13 @@ app.post("/get-colleges", async (req, res) => {
   }
 });
 
+app.get("/",(req,res)=>{
+  return res.json("HOLA AMIGO!")
+})
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
