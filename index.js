@@ -35,7 +35,9 @@ function filterColleges(colleges, quota, categories, rank) {
     })
     .map((college) => {
       const collegeData = college["quotas"][quota][categories].filter((ele) => {
-        return ele["Closing_Rank_2024"] >= rank;
+        return (
+          ele["Opening_Rank_2024"] <= rank && ele["Closing_Rank_2024"] >= rank
+        );
       });
 
       if (collegeData.length === 0) {
@@ -99,13 +101,12 @@ app.post("/get-colleges", async (req, res) => {
   }
 });
 
-app.get("/",(req,res)=>{
-  return res.json("HOLA AMIGO!")
-})
+app.get("/", (req, res) => {
+  return res.json("HOLA AMIGO!");
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
