@@ -149,7 +149,7 @@ app.post("/get-ratings", async (req, res) => {
         ratings.push(data);
       }
     });
-    console.log(colleges.length)
+    // console.log(colleges.length)
 
     return res.send(ratings);
   } catch (error) {
