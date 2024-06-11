@@ -22,16 +22,17 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // colleges = JSON.parse(fs.readFileSync("transformedData.json"));
-ratings = JSON.parse(fs.readFileSync("Ratings.json"));
+// ratings = JSON.parse(fs.readFileSync("Ratings.json"));
 
-function filterColleges(colleges, quota, categories, rank) {
+function filterColleges(colleges, quota, categories, rank, jee) {
   const temp = colleges
     .filter((college) => {
       return (
         college &&
         college["quotas"] &&
         college["quotas"][quota] &&
-        college["quotas"][quota][categories]
+        college["quotas"][quota][categories] &&
+        college["jee"] === jee
       );
     })
     .map((college) => {
@@ -48,6 +49,9 @@ function filterColleges(colleges, quota, categories, rank) {
       return {
         institute_name: college["institute_name"],
         departments: collegeData,
+        state: college["state"],
+        overallRating: college["overallRating"],
+        jee: college["jee"],
       };
     })
     .filter((college) => college !== null);
@@ -56,10 +60,16 @@ function filterColleges(colleges, quota, categories, rank) {
 
   for (let i = 0; i < temp.length; i++) {
     const institute_name = temp[i]["institute_name"];
+    const overallRating = temp[i]["overallRating"];
+    const state = temp[i]["state"];
+    const jee = temp[i]["jee"];
     const departments = temp[i]["departments"];
     for (let j = 0; j < departments.length; j++) {
       filteredColleges.push({
         institute_name: institute_name,
+        State: state,
+        jee: jee,
+        overallRating: overallRating,
         department: departments[j]["Department"],
         Closing_Rank_2024: departments[j]["Closing_Rank_2024"],
         Opening_Rank_2024: departments[j]["Opening_Rank_2024"],
@@ -73,15 +83,15 @@ function filterColleges(colleges, quota, categories, rank) {
 // API route to get colleges based on filters
 app.post("/get-colleges", async (req, res) => {
   try {
-    const { quota, categories, rank } = req.body;
+    const { quota, categories, rank, jee } = req.body;
 
-    if (!quota || !categories || rank === undefined) {
+    if (!quota || !categories || !rank || !jee === undefined) {
       return res
         .status(400)
-        .send({ error: "quota, categories, and rank are required" });
+        .send({ error: "quota, categories, jee and rank are required" });
     }
 
-    const snapshot = await db.collection("institutes_new").get();
+    const snapshot = await db.collection("institutes").get();
 
     if (snapshot.empty) {
       console.log("No documents found in collection.");
@@ -94,16 +104,54 @@ app.post("/get-colleges", async (req, res) => {
       collegesDB.push(doc.data());
     });
 
-    fs.writeFileSync("testing.json", JSON.stringify(collegesDB, null, 4));
-
     const filteredColleges = filterColleges(
       collegesDB,
       quota,
       categories,
-      rank
+      rank,
+      jee
     );
 
     return res.send(filteredColleges);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.post("/get-ratings", async (req, res) => {
+  try {
+    const { colleges } = req.body;
+
+    if (!colleges) {
+      return res.status(400).send({ error: "colleges are required" });
+    }
+
+    const snapshot = await db.collection("ratings").get();
+
+    if (snapshot.empty) {
+      console.log("No documents found in collection.");
+      return;
+    }
+
+    let ratings = [];
+    // Iterate through each document
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const instituteName = data.Institute;
+      const isExist = colleges.find(
+        (item) =>
+          item?.split("(")[1]?.split(")")[0].toLowerCase() ===
+            instituteName?.split("(")[1]?.split(")")[0].toLowerCase() ||
+          item?.split(" (")[0].toLowerCase() ===
+            instituteName?.split(" (")[0].toLowerCase()
+      );
+      if (isExist) {
+        ratings.push(data);
+      }
+    });
+    console.log(colleges.length)
+
+    return res.send(ratings);
   } catch (error) {
     console.log(error);
   }
