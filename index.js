@@ -24,6 +24,31 @@ app.use(cors());
 // colleges = JSON.parse(fs.readFileSync("transformedData.json"));
 // ratings = JSON.parse(fs.readFileSync("Ratings.json"));
 
+function matchCollegeName(instituteName, collegeName) {
+  return (
+    instituteName.toLowerCase() === collegeName.toLowerCase() ||
+    (instituteName.replace(/,/g, "")?.split("(")[1]?.split(")")[0] !==
+      undefined &&
+      collegeName.replace(/,/g, "")?.split("(")[1]?.split(")")[0] !==
+        undefined &&
+      instituteName
+        .replace(/,/g, "")
+        ?.split("(")[1]
+        ?.split(")")[0]
+        .toLowerCase() ===
+        collegeName
+          .replace(/,/g, "")
+          ?.split("(")[1]
+          ?.split(")")[0]
+          .toLowerCase()) ||
+    instituteName.replace(/,/g, "")?.split(" (")[0].toLowerCase() ===
+      collegeName.replace(/,/g, "")?.split(" (")[0].toLowerCase() ||
+    instituteName.replace(/,/g, "") === collegeName.replace(/,/g, "") ||
+    instituteName?.replace(/,/g, "").includes(collegeName.replace(/,/g, "")) ||
+    collegeName?.replace(/,/g, "").includes(instituteName.replace(/,/g, ""))
+  );
+}
+
 function filterColleges(colleges, quota, categories, rank, jee) {
   const temp = colleges
     .filter((college) => {
@@ -138,12 +163,8 @@ app.post("/get-ratings", async (req, res) => {
     snapshot.forEach((doc) => {
       const data = doc.data();
       const instituteName = data.Institute;
-      const isExist = colleges.find(
-        (item) =>
-          item?.split("(")[1]?.split(")")[0].toLowerCase() ===
-            instituteName?.split("(")[1]?.split(")")[0].toLowerCase() ||
-          item?.split(" (")[0].toLowerCase() ===
-            instituteName?.split(" (")[0].toLowerCase()
+      const isExist = colleges.find((item) =>
+        matchCollegeName(item, instituteName)
       );
       if (isExist) {
         ratings.push(data);
@@ -152,6 +173,46 @@ app.post("/get-ratings", async (req, res) => {
     // console.log(colleges.length)
 
     return res.send(ratings);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.get("/get-college-info", async (req, res) => {
+  try {
+    const { collegeName } = req.query;
+
+    if (!collegeName) {
+      return res.status(400).send({ error: "collegeName are required" });
+    }
+
+    const snapshot1 = await db.collection("college_info").get();
+    const snapshot2 = await db.collection("cutoffs").get();
+
+    if (snapshot1.empty) {
+      console.log("No documents found in collection.");
+      return res.status(404).send({ error: "404 Not Found!" });
+    }
+    if (snapshot2.empty) {
+      console.log("No documents found in collection.");
+      return res.status(404).send({ error: "404 Not Found!" });
+    }
+
+    let colleges = {};
+
+    snapshot1.forEach((doc) => {
+      const instituteName = doc.data().Institute;
+      if (matchCollegeName(instituteName, collegeName))
+        colleges = { ...doc.data() };
+    });
+
+    snapshot2.forEach((doc) => {
+      const instituteName = doc.data().institute_name.toLowerCase();
+      if (matchCollegeName(instituteName, collegeName))
+        colleges = { ...colleges, Cutoff: doc.data().quotas };
+    });
+
+    return res.status(200).send(colleges);
   } catch (error) {
     console.log(error);
   }
