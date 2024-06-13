@@ -116,18 +116,18 @@ app.post("/get-colleges", async (req, res) => {
         .send({ error: "quota, categories, jee and rank are required" });
     }
 
-    const snapshot = await db.collection("institutes").get();
+    const snapshot = JSON.parse(fs.readFileSync("./assets/institutes.json"));
 
     if (snapshot.empty) {
       console.log("No documents found in collection.");
       return;
     }
 
-    let collegesDB = [];
+    let collegesDB = snapshot;
     // Iterate through each document
-    snapshot.forEach((doc) => {
-      collegesDB.push(doc.data());
-    });
+    // snapshot.forEach((doc) => {
+    //   collegesDB.push(doc.data());
+    // });
 
     const filteredColleges = filterColleges(
       collegesDB,
@@ -151,7 +151,8 @@ app.post("/get-ratings", async (req, res) => {
       return res.status(400).send({ error: "colleges are required" });
     }
 
-    const snapshot = await db.collection("ratings").get();
+    // const snapshot = await db.collection("ratings").get();
+    const snapshot = JSON.parse(fs.readFileSync("./assets/ratings.json"))
 
     if (snapshot.empty) {
       console.log("No documents found in collection.");
@@ -161,7 +162,7 @@ app.post("/get-ratings", async (req, res) => {
     let ratings = [];
     // Iterate through each document
     snapshot.forEach((doc) => {
-      const data = doc.data();
+      const data = doc;
       const instituteName = data.Institute;
       const isExist = colleges.find((item) =>
         matchCollegeName(item, instituteName)
@@ -186,8 +187,11 @@ app.get("/get-college-info", async (req, res) => {
       return res.status(400).send({ error: "collegeName are required" });
     }
 
-    const snapshot1 = await db.collection("college_info").get();
-    const snapshot2 = await db.collection("cutoffs").get();
+    // const snapshot1 = await db.collection("college_info").get();
+    // const snapshot2 = await db.collection("cutoffs").get()
+
+    const snapshot1 = JSON.parse(fs.readFileSync("./assets/college_info.json"))
+    const snapshot2 = JSON.parse(fs.readFileSync("./assets/cutoffs.json"))
 
     if (snapshot1.empty) {
       console.log("No documents found in collection.");
@@ -201,15 +205,15 @@ app.get("/get-college-info", async (req, res) => {
     let colleges = {};
 
     snapshot1.forEach((doc) => {
-      const instituteName = doc.data().Institute;
+      const instituteName = doc.Institute;
       if (matchCollegeName(instituteName, collegeName))
-        colleges = { ...doc.data() };
+        colleges = { ...doc };
     });
 
     snapshot2.forEach((doc) => {
-      const instituteName = doc.data().institute_name.toLowerCase();
+      const instituteName = doc.institute_name.toLowerCase();
       if (matchCollegeName(instituteName, collegeName))
-        colleges = { ...colleges, Cutoff: doc.data().quotas };
+        colleges = { ...colleges, Cutoff: doc.quotas };
     });
 
     return res.status(200).send(colleges);
